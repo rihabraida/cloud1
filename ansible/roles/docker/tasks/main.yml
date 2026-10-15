@@ -1,0 +1,18 @@
+---
+# tasks file for roles/docker
+- name: Install Docker with the convenience script
+  ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
+  args:
+    creates: /usr/bin/docker      # skip if Docker is already installed
+
+- name: Enable and start Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true                 # start at boot (needed for reboot survival)
+    state: started
+
+- name: Add user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true

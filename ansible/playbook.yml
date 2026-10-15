@@ -1,0 +1,8 @@
+- hosts: cloud1
+  become: true # makes tasks run with sudo, since installing packages needs root.
+  roles:
+    - common
+    - docker
+    - firewall
+    - Dns
+    - deploy

@@ -1,0 +1,107 @@
+# Docker Compose configuration (rendered by Ansible: roles/app/templates/docker-compose.yml.j2)
+services:
+  nginx:
+    build: ./requirements/nginx
+    container_name: nginx
+    image: nginx
+    ports:
+      - "80:80"      # HTTP (redirect to HTTPS in the nginx config)
+      - "443:443"    # HTTPS
+    restart: always
+    depends_on:
+      - wordpress
+      - phpmyadmin
+      - adminer
+      - sitatic_site
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    volumes:
+      - volume_wordpress:/var/www/wordpress
+
+  wordpress:
+    build: ./requirements/wordpress
+    container_name: wordpress
+    image: wordpress
+    depends_on:
+      - mariadb
+    restart: always
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - user_password
+    volumes:
+      - volume_wordpress:/var/www/wordpress
+
+  mariadb:
+    build: ./requirements/mariadb
+    container_name: mariadb
+    image: mariadb
+    restart: always
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - db_root_password
+    volumes:
+      - volume_mariadb:/var/lib/mysql
+
+  sitatic_site:
+    build: ./requirements/bonus/sitatic_site
+    container_name: sitatic_site
+    image: sitatic_site
+    restart: always
+    networks:
+      - inception_network
+
+  adminer:
+    build: ./requirements/bonus/adminer
+    image: adminer
+    container_name: adminer
+    restart: always
+    networks:
+      - inception_network
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      - mariadb
+    environment:
+      PMA_HOST: "{{ db_host }}"
+    networks:
+      - inception_network
+
+networks:
+  inception_network:
+    driver: bridge
+
+volumes:
+  volume_mariadb:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ data_dir }}/mariadb"
+  volume_wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ data_dir }}/wordpress"
+
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  user_password:
+    file: ./secrets/user_password.txt
+  db_root_password:
+    file: ./secrets/db_root_password.txt

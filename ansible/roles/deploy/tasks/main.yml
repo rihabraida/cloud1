@@ -1,0 +1,37 @@
+- name: Create project and secrets directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ project_dir }}", mode: "0755" }
+    - { path: "{{ project_dir }}/secrets", mode: "0700" }
+
+- name: Copy Inception directory to project directory
+  ansible.builtin.copy:
+    src: ./Inception/
+    dest: "{{ project_dir }}/"
+    mode: preserve
+
+- name: Generate .env
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ project_dir }}/.env"
+    mode: "0600"
+
+- name: Write secret files from vault
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ project_dir }}/secrets/{{ item.name }}.txt"
+    mode: "0400"
+  loop:
+    - { name: db_password, value: "{{ db_password }}" }
+    - { name: user_password, value: "{{ wp_admin_password }}" }
+    - { name: db_root_password, value: "{{ db_root_password }}" }
+  no_log: true
+
+- name: Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ project_dir }}"
+    build: always
+    state: present
