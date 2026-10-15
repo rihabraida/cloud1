@@ -1,0 +1,82 @@
+# Docker Compose configuration
+services:
+  nginx:
+    build: ./requirements/nginx
+    container_name: nginx
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: always
+    depends_on:
+      - wordpress
+      - phpmyadmin
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    volumes:
+      - volume_wordpress:/var/www/wordpress
+      - volume_nginx:/var/log/nginx
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+  wordpress:
+    build: ./requirements/wordpress
+    container_name: wordpress
+    image: wordpress
+    depends_on:
+      - mariadb
+    restart: always
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - user_password
+    volumes:
+      - volume_wordpress:/var/www/wordpress
+
+  mariadb:
+    build: ./requirements/mariadb
+    container_name: mariadb
+    image: mariadb
+    restart: always
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - db_root_password
+    volumes:
+      - volume_mariadb:/var/lib/mysql
+
+  # Official image: no build folder needed. Not published, nginx proxies to it.
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    networks:
+      - inception_network
+    env_file:
+      - .env
+    depends_on:
+      - mariadb
+
+networks:
+  inception_network:
+    driver: bridge
+
+volumes:
+  volume_wordpress:
+  volume_mariadb:
+  volume_nginx:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  user_password:
+    file: ./secrets/user_password.txt
+  db_root_password:
+    file: ./secrets/db_root_password.txt
